@@ -12,3 +12,4 @@ int addrparser(const char *addrstr, const char *portstr, struct sockaddr_storage
 
 int server_sockaddr_init(const char* proto, const char* portstr, struct sockaddr_storage * storage);
 
+void read_board(int board[4][4]);

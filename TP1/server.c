@@ -8,10 +8,16 @@
 
 #include "common.h"
 
-#define BUFFSIZE 1024
 #define PENDING_CONNECTIONS 10
 
+struct action{
+    int type;
+    int coordinates[2];
+    int board[4][4];
+};
+
 int main(int argc, char* argv[]){
+    const int BUFFSIZE = sizeof(struct action);
 
     // if (argc != 5){
     //     printf("Usage: <v4/v6> <Port Number> -i <Path>\n");
@@ -65,15 +71,16 @@ int main(int argc, char* argv[]){
         addrtostr(caddr, caddrstr, BUFFSIZE);
         printf("[log] connection from %s\n", caddrstr);
 
-        char buf[BUFFSIZE];
-        memset(buf, 0, BUFFSIZE);
-        size_t count = recv(csock, buf, BUFFSIZE, 0);
-        printf("[MSG] %s, %d bytes: %s\n", caddrstr, (int)count, buf);
-        sprintf(buf, "Remote endpoint: %.1000s\n", caddrstr);
+        struct action buf[BUFFSIZE];
+        while(1){
+            memset(buf, 0, BUFFSIZE);
+            size_t count = recv(csock, buf, BUFFSIZE+1, 0);
+            printf("[MSG] %s, %d bytes: %d\n", caddrstr, (int)count, buf->type);
+            // sprintf(buf, "Remote endpoint: %.1000s\n", caddrstr);
 
-        count = send(csock, buf, strlen(buf)+1, 0);
-        if (count != strlen(buf)+1) logexit("send");
-
+            count = send(csock, buf, BUFFSIZE+1, 0);
+            if (count != BUFFSIZE+1) logexit("send");
+        }
         close(csock);
     }
 }

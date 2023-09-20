@@ -5,6 +5,7 @@
 
 #include <arpa/inet.h>
 
+
 void logexit(const char *str){
     perror(str);
     exit(EXIT_FAILURE);
@@ -84,4 +85,12 @@ int server_sockaddr_init(const char* proto, const char* portstr, struct sockaddr
         return 0;
     }
     else return -1;
+}
+
+void read_board(int board[4][4]){
+    for (int i = 0; i < 4; i++){
+        for (int j = 0; j < 4; ++j){
+            scanf("%d", &board[i][j]);
+        }
+    }
 }

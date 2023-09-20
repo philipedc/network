@@ -1,3 +1,5 @@
+#include "common.h"
+
 #include <stdio.h> 
 #include <unistd.h>
 #include <stdlib.h>
@@ -7,9 +9,12 @@
 #include <sys/types.h>
 #include <arpa/inet.h>
 
-#include "common.h"
 
-#define BUFFSIZE 1024
+struct action{
+    int type;
+    int coordinates[2];
+    int board[4][4];
+};
 
 void usage(int argc, char* argv[]){
     printf("Usage: %s <IP> <Port Number>\n", argv[0]);
@@ -17,6 +22,8 @@ void usage(int argc, char* argv[]){
 }
 
 int main(int argc, char* argv[]){
+    const int BUFFSIZE = sizeof(struct action);
+
     if (argc != 3) usage(argc, argv);
 
     struct sockaddr_storage storage;
@@ -33,23 +40,20 @@ int main(int argc, char* argv[]){
 
     printf("Connected to %s\n", addrstr);
 
-    char buf[BUFFSIZE];
-    memset(buf, 0, BUFFSIZE);
-    printf("Data sent: ");
-    fgets(buf, BUFFSIZE-1, stdin);
-    size_t count = send(s, buf, strlen(buf)+1, 0);
-    if (count != strlen(buf)+1) logexit("send");
-
-    memset(buf, 0, BUFFSIZE);
-    unsigned total = 0;
+    struct action buf[BUFFSIZE];
     while(1){
-        count = recv(s, buf + total, BUFFSIZE - total, 0);
-        if (count == 0) break; // connection terminated
-        total += count;
+        memset(buf, 0, BUFFSIZE);
+        scanf("%d", &buf->type);
+        if (buf->type == 7) break;
+        printf("Data sent: ");
+        
+        size_t count = send(s, buf, BUFFSIZE+1, 0);
+        if (count != BUFFSIZE+1) logexit("send");
+
+        memset(buf, 0, BUFFSIZE);
+        if (recv (s, buf, BUFFSIZE+1, 0) == -1) logexit("recv");
+        printf("Data received: %d\n", buf->type);
     }
     close(s);
-
-    printf("Received %u bytes\n", total);
-    printf("Data received: %s\n", buf);
     exit(EXIT_SUCCESS);
 }
