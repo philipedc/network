@@ -101,6 +101,11 @@ int main(int argc, char* argv[]){
             memset(buf, 0, BUFFSIZE);
             size_t count = recv(csock, buf, BUFFSIZE+1, 0);
 
+            if (buf->type == 7){
+                printf("[log] connection closed from %s\n", caddrstr);
+                break;
+            }
+
             int board[SIZE][SIZE];
             int revealed[SIZE][SIZE];
             play_game(path, board, revealed, buf);

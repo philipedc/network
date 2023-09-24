@@ -64,7 +64,12 @@ int main(int argc, char* argv[]){
         else if(strcmp(command, "remove_flag") == 0) buf->type = 4;
         else if(strcmp(command, "reset") == 0) buf->type = 5;
         else if(strcmp(command, "game_over") == 0) buf->type = 8;
-        else if(strcmp(command, "exit") == 0) break;
+        else if(strcmp(command, "exit") == 0){
+            buf->type = 7;
+            size_t count = send(s, buf, BUFFSIZE+1, 0);
+            if (count != BUFFSIZE+1) logexit("send");
+            break;
+        }
         else buf->type = -1;
         // printf("Data sent: {type: %d, coordinates: [%d, %d]}", buf->type, buf->coordinates[0], buf->coordinates[1]);
         if (check_errors(buf->type, buf->coordinates, buf->board) != 0) continue;
@@ -81,6 +86,10 @@ int main(int argc, char* argv[]){
 
         if (check_bomb(buf->board, buf->coordinates) == true){
             printf("GAME OVER!\n");
+            buf->type = 8;
+            send(s, buf, BUFFSIZE+1, 0);
+            memset(buf, 0, BUFFSIZE);
+            recv (s, buf, BUFFSIZE+1, 0);
         }
         print_game(buf->board);
     }

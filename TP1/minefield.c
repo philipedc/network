@@ -8,6 +8,15 @@
 #define OBFUSCATED -2
 #define FLAGGED -3
 
+
+void reveal_board(int board[SIZE][SIZE], int revealed[SIZE][SIZE]){
+    for (int i = 0; i < SIZE; i++){
+        for (int y = 0; y < SIZE; y++){
+            revealed[i][y] = board[i][y];
+        }
+    }
+}
+
 bool check_bomb(int matrix[SIZE][SIZE], int coordinates[2]){
     if (matrix[coordinates[0]][coordinates[1]] == BOMB) return true;
     return false;
@@ -107,18 +116,21 @@ int perform_action(char* path, int type, int coordinates[2], int board[SIZE][SIZ
         return 0;
     }
     
-    else if (type == 2){
+    if (type == 2){
         revealed[coordinates[0]][coordinates[1]] = FLAGGED;
         return 0;
     }
-    else if (type == 4){
+    if (type == 4){
         revealed[coordinates[0]][coordinates[1]] = OBFUSCATED;
         return 0;
     }
-    else if (type == 5){
+    if (type == 5){
         printf("starting new game\n");
         reset_matrix(revealed);
         return 0;
+    }
+    if (type == 8){
+        reveal_board(board, revealed);
     }
     return 0;
 }
