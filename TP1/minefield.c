@@ -116,8 +116,8 @@ int perform_action(char* path, int type, int coordinates[2], int board[SIZE][SIZ
         return 0;
     }
     else if (type == 5){
+        printf("starting new game\n");
         reset_matrix(revealed);
-        reset_matrix(board);
         return 0;
     }
     return 0;
