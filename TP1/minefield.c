@@ -8,6 +8,20 @@
 #define OBFUSCATED -2
 #define FLAGGED -3
 
+struct action{
+    int type;
+    int coordinates[2];
+    int board[4][4];
+};
+
+int update_matrix(int matrix[SIZE][SIZE], struct action *buf){
+    for (int i = 0; i < SIZE; i++){
+        for (int y = 0; y < SIZE; y++){
+            buf->board[i][y] = matrix[i][y];
+        }
+    }
+    return 0;
+}
 
 void reveal_board(int board[SIZE][SIZE], int revealed[SIZE][SIZE]){
     for (int i = 0; i < SIZE; i++){
@@ -90,6 +104,7 @@ int check_errors(int type, int coordinates[2], int revealed[SIZE][SIZE]){
             printf("error: cell already revealed\n");
             return -4;
         }
+    return 0;
     }
     else if (type == 4){ // Remove FLAGGED
         if (revealed[coordinates[0]][coordinates[1]] != FLAGGED){
@@ -104,34 +119,39 @@ int check_errors(int type, int coordinates[2], int revealed[SIZE][SIZE]){
     return 0;
 }
 
-// ERRORS ALREADY CHECKED IN THE CLIENT
-int perform_action(char* path, int type, int coordinates[2], int board[SIZE][SIZE], int revealed[SIZE][SIZE]){
+int play_game(char* path, struct action *buf, int board[SIZE][SIZE], int revealed[SIZE][SIZE]){
 
-    if (type == 0){
+    int coordinates[2];
+    coordinates[0] = buf->coordinates[0];
+    coordinates[1] = buf->coordinates[1]; 
+
+    if (buf->type == 0){
         initialize_game(path, board, revealed);
     }
 
-    if (type == 1){ 
+    if (buf->type == 1){ 
         revealed[coordinates[0]][coordinates[1]] = board[coordinates[0]][coordinates[1]];
-        return 0;
+        if (check_win(revealed) == 1){
+            buf->type = 6;
+            reveal_board(board, revealed);
+        }
+        if (check_bomb(board, buf->coordinates) == true){
+            buf->type = 8;
+            reveal_board(board, revealed);
+        }
     }
     
-    if (type == 2){
+    else if (buf->type == 2){
         revealed[coordinates[0]][coordinates[1]] = FLAGGED;
-        return 0;
     }
-    if (type == 4){
+    else if (buf->type == 4){
         revealed[coordinates[0]][coordinates[1]] = OBFUSCATED;
-        return 0;
     }
-    if (type == 5){
+    else if (buf->type == 5){
         printf("starting new game\n");
         reset_matrix(revealed);
-        return 0;
     }
-    if (type == 8){
-        reveal_board(board, revealed);
-    }
+    update_matrix(revealed, buf);
     return 0;
 }
 

@@ -12,31 +12,6 @@
 #define PENDING_CONNECTIONS 10
 #define SIZE 4
 
-struct action{
-    int type;
-    int coordinates[2];
-    int board[4][4];
-};
-
-int update_matrix(int matrix[SIZE][SIZE], struct action *buf){
-    for (int i = 0; i < SIZE; i++){
-        for (int y = 0; y < SIZE; y++){
-            buf->board[i][y] = matrix[i][y];
-        }
-    }
-    return 0;
-}
-
-int play_game(char* path, int board[SIZE][SIZE], int revealed[SIZE][SIZE], struct action *buf){
-
-    perform_action(path, buf->type, buf->coordinates, board, revealed);
-    if (check_win(revealed) == 1){
-        printf("You won!\n");
-        buf->type = 6;
-    }
-    update_matrix(revealed, buf);
-    return 0;
-}
 
 int main(int argc, char* argv[]){
     const int BUFFSIZE = sizeof(struct action);
@@ -80,11 +55,14 @@ int main(int argc, char* argv[]){
     if (bind(s, addr, sizeof(storage)) != 0) logexit("bind");
     if (listen(s, PENDING_CONNECTIONS) != 0) logexit("listen");
 
+    int board[SIZE][SIZE];
+    int revealed[SIZE][SIZE];
+    initialize_game(path, board, revealed);
+    print_game(board);
+
     char addrstr[BUFFSIZE];
     addrtostr(addr, addrstr, BUFFSIZE);
-    printf("Bound to %s, waiting connections\n", addrstr);
-
-    while(1){ //Listening
+    while(1){
         struct sockaddr_storage *cstorage;
         struct sockaddr *caddr = (struct sockaddr *) &cstorage;
         socklen_t caddrlen = sizeof(cstorage);
@@ -92,9 +70,10 @@ int main(int argc, char* argv[]){
         int csock = accept(s, caddr, &caddrlen);
         if (csock == -1) logexit("accept");
 
+
         char caddrstr[BUFFSIZE];
         addrtostr(caddr, caddrstr, BUFFSIZE);
-        printf("[log] connection from %s\n", caddrstr);
+        printf("client connected\n");
 
         struct action buf[BUFFSIZE];
         while(1){ // Reading input from client
@@ -102,15 +81,11 @@ int main(int argc, char* argv[]){
             size_t count = recv(csock, buf, BUFFSIZE+1, 0);
 
             if (buf->type == 7){
-                printf("[log] connection closed from %s\n", caddrstr);
+                printf("client disconnected\n");
                 break;
             }
 
-            int board[SIZE][SIZE];
-            int revealed[SIZE][SIZE];
-            play_game(path, board, revealed, buf);
-
-            printf("[MSG] %s, %d bytes {command: %d, coordinates: %d %d}\n", caddrstr, (int)count, buf->type, buf->coordinates[0], buf->coordinates[1]);
+            play_game(path, buf, board, revealed);
 
             count = send(csock, buf, BUFFSIZE+1, 0);
             if (count != BUFFSIZE+1) logexit("send");

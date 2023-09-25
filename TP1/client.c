@@ -11,12 +11,6 @@
 #include <arpa/inet.h>
 
 
-struct action{
-    int type;
-    int coordinates[2];
-    int board[4][4];
-};
-
 void usage(int argc, char* argv[]){
     printf("Usage: %s <IP> <Port Number>\n", argv[0]);
     exit(EXIT_FAILURE);
@@ -39,8 +33,6 @@ int main(int argc, char* argv[]){
     char addrstr[BUFFSIZE];
     addrtostr(addr, addrstr, BUFFSIZE);
 
-    printf("Connected to %s\n", addrstr);
-
     struct action buf[BUFFSIZE];
     memset(buf, 0, BUFFSIZE+1);
     while(1){
@@ -56,7 +48,6 @@ int main(int argc, char* argv[]){
             buf->coordinates[1] = atoi(strtok(NULL, ","));
         }
 
-        // printf("<%s %d %d>\n", command, buf->coordinates[0], buf->coordinates[1]);
 
         if (strcmp(command, "start") == 0) buf->type = 0;
         else if (strcmp(command, "reveal") == 0) buf->type = 1;
@@ -83,13 +74,8 @@ int main(int argc, char* argv[]){
         if (buf->type == 6){
             printf("YOU WIN!\n");
         }
-
-        if (check_bomb(buf->board, buf->coordinates) == true){
+        if (buf->type == 8){
             printf("GAME OVER!\n");
-            buf->type = 8;
-            send(s, buf, BUFFSIZE+1, 0);
-            memset(buf, 0, BUFFSIZE);
-            recv (s, buf, BUFFSIZE+1, 0);
         }
         print_game(buf->board);
     }

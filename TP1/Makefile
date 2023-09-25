@@ -5,4 +5,4 @@ all:
 	gcc -Wall server.c common.o minefield.o -o server
 
 clean:
-	rm -f client server common.o
+	rm -f client server common.o minefield.o
