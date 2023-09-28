@@ -7,8 +7,8 @@ Code written in C using the lib socket to create a minefield game communication 
 ### How to use:
 
 - Build the project running "make"
-- Execute the server: "./bin/server <v4/v6> <Port Number> -i <path_to_board>"
-- Execute the client: "./bin/client <IP> <Port Number>"
+- Execute the server: "./bin/server <v4/v6> <Port_Number> -i <path_to_board>"
+- Execute the client: "./bin/client <IP> <Port_Number>"
 - Now you can execute "Commands" in the client terminal
 
 ### Commands:
