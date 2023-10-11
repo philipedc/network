@@ -37,8 +37,8 @@ bool check_bomb(int matrix[SIZE][SIZE], int coordinates[2]){
 }
 
 bool isRevealed(int matrix[SIZE][SIZE], int coordinates[2]){
-    if (matrix[coordinates[0]][coordinates[1]] > 0 || matrix[coordinates[0]][coordinates[1]] == BOMB) return true;
-    return false;
+    if (matrix[coordinates[0]][coordinates[1]] == OBFUSCATED || matrix[coordinates[0]][coordinates[1]] == FLAGGED) return false;
+    return true;
 }
 
 void reset_matrix(int matrix[SIZE][SIZE]){
@@ -91,7 +91,7 @@ int check_errors(int type, int coordinates[2], int revealed[SIZE][SIZE]){
     }
     else if (type == 1){ // Reveal
         if (isRevealed(revealed, coordinates)){
-            printf("error: invalid cell\n");
+            printf("error: already revealed\n");
             return -2;
         }
     }
@@ -163,9 +163,10 @@ int check_win(int revealed[SIZE][SIZE]){
         for (int y = 0; y < SIZE; y++){
             coordinates[0] = i;
             coordinates[1] = y;
-            if (revealed[i][y] == isRevealed(revealed, coordinates)) count++;
+            if (isRevealed(revealed, coordinates)) count++;
         }
     }
+    printf("count: %d\n", count);
     if (count == SIZE*SIZE-3) return 1; // 3 is the number of bombs
     return 0;
 }
