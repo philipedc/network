@@ -9,41 +9,128 @@
 #include <stdlib.h>
 #include <string.h>
 
-
-
-#define BUFFSIZE 1024
 #define PENDING_CONNECTIONS 10
+#define MAX_CLIENTS 20
+#define MAX_TOPICS 20
 
 struct client_data{
     int csock;
     struct sockaddr_storage storage;
+    int client_id;
+    struct topic *topics[MAX_TOPICS];
 };
+
+int client_id = 0;
+
+struct topic{
+    char topic_name[50];
+};
+
+struct topic topics[MAX_TOPICS];
+struct client_data *clients[MAX_CLIENTS]; 
+unsigned int buf_size = sizeof(struct BlogOperation);
+
+
+int Operation(struct BlogOperation *buf, struct client_data *cdata){
+    enum {x, NEW_CONNECTION, NEW_POST, LIST_TOPICS, SUBSCRIBE_TOPIC, DISCONNECT, UNSUBSCRIBE_TOPIC};
+    switch(buf->operation_type){
+        case NEW_CONNECTION:
+            buf->server_response = 1;
+            break;
+        case NEW_POST:
+            return 2;
+            break;
+        case LIST_TOPICS:
+            for (int i = 0; i < MAX_TOPICS; i++){
+                if (strcmp(topics[i].topic_name, "") != 0){
+                    strcpy(buf->content, topics[i].topic_name);
+                }
+            }
+            break;
+        case SUBSCRIBE_TOPIC:;
+            int first_empty = -1;
+            for (int i = 0; i < MAX_TOPICS; i++){
+                if (strcmp(cdata->topics[i]->topic_name, "") == 0 && first_empty == -1){
+                    first_empty = i;
+                    break;
+                }
+            }
+            if (first_empty != -1){
+                strcpy(cdata->topics[first_empty]->topic_name, buf->topic);
+                printf("Client %d subscribed to %s\n", cdata->client_id, buf->topic);
+            }
+            for (int i = 0; i < MAX_TOPICS; i++){
+                if (strcmp(topics[i].topic_name, buf->topic) != 0){
+                    strcpy(topics[i].topic_name, buf->topic);
+                    break;
+                }
+            }
+            break;
+        case DISCONNECT:
+            return -1;
+        case UNSUBSCRIBE_TOPIC:
+            break;
+        default:
+            printf("Invalid operation\n");
+            break;
+    }
+    return 0;
+}
 
 void *client_thread(void *data){
     
-    struct client_data*cdata = (struct client_data*) data;
+    struct client_data *cdata = (struct client_data*) data;
     struct sockaddr *caddr = (struct sockaddr *) &cdata->storage;
 
-    char caddrstr[BUFFSIZE];
-    addrtostr(caddr, caddrstr, BUFFSIZE);
-    printf("[log] connection from %s\n", caddrstr);
+    char caddrstr[buf_size];
+    addrtostr(caddr, caddrstr, buf_size);
+    printf("client %d connected\n", cdata->client_id);
 
-    char buf[BUFFSIZE];
-    memset(buf, 0, BUFFSIZE);
-    size_t count = recv(cdata->csock, buf, BUFFSIZE, 0);
-    printf("[MSG] %s, %d bytes: %s\n", caddrstr, (int)count, buf);
-    sprintf(buf, "Remote endpoint: %.1000s\n", caddrstr);
+    struct BlogOperation *buf = malloc(buf_size);
+    char* buf_serialized = (char*) malloc(buf_size);
 
-    count = send(cdata->csock, buf, strlen(buf)+1, 0);
-    if (count != strlen(buf)+1) logexit("send");
+    while(1){
+        memset(buf, 0, buf_size);
+        memset(buf_serialized, 0, buf_size);
+        int count = recv(cdata->csock, buf_serialized, buf_size, 0);
+        printf("[MSG]: %s", buf_serialized);
+        deserialize_BlogOperation(buf_serialized, buf);
 
+        int flag = Operation(buf, cdata);
+
+        if (flag == -1){
+            break;
+        }
+        else if (flag == 2){
+            for (int i = 0; i < MAX_CLIENTS; i++){
+                if (clients[i]->client_id != -1){
+                    for (int j = 0; j < MAX_CLIENTS; j++){
+                        if (strcmp(clients[i]->topics[j]->topic_name, buf->topic) == 0){
+                            buf->client_id = clients[i]->client_id;
+                            serialize_BlogOperation(buf, buf_serialized, buf_size);
+                            count = send(clients[i]->csock, buf_serialized, strlen(buf_serialized)+1, 0);
+                            if (count != strlen(buf_serialized)+1) logexit("send");
+                        }
+                    }
+                }
+            }
+        }
+        else{
+            buf->client_id = cdata->client_id;
+            serialize_BlogOperation(buf, buf_serialized, buf_size);
+            count = send(cdata->csock, buf_serialized, strlen(buf_serialized)+1, 0);
+            if (count != strlen(buf_serialized)+1) logexit("send");
+        }
+    }
     close(cdata->csock);
 
     pthread_exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char* argv[]){
-
+    for (int i = 0; i < MAX_TOPICS; i++){
+        strcpy(topics[i].topic_name, "");
+    }
     // if (argc != 5){
     //     printf("Usage: <v4/v6> <Port Number> -i <Path>\n");
     //     exit(EXIT_FAILURE);
@@ -80,11 +167,20 @@ int main(int argc, char* argv[]){
     if (bind(s, addr, sizeof(storage)) != 0) logexit("bind");
     if (listen(s, PENDING_CONNECTIONS) != 0) logexit("listen");
 
-    char addrstr[BUFFSIZE];
-    addrtostr(addr, addrstr, BUFFSIZE);
+    char addrstr[buf_size];
+    addrtostr(addr, addrstr, buf_size);
     printf("Bound to %s, waiting connections\n", addrstr);
 
+    for (int i = 0; i < MAX_CLIENTS; i++){
+        clients[i] = (struct client_data *)malloc(sizeof(struct client_data));
+        clients[i]->client_id = -1;
+        for (int j = 0; j < MAX_TOPICS; j++){
+            clients[i]->topics[j] = (struct topic *)malloc(sizeof(struct topic)*MAX_TOPICS);
+            strcpy(clients[i]->topics[j]->topic_name, "");
+        }
+    }
     while(1){
+
         struct sockaddr_storage *cstorage;
         struct sockaddr *caddr = (struct sockaddr *) &cstorage;
         socklen_t caddrlen = sizeof(cstorage);
@@ -96,6 +192,19 @@ int main(int argc, char* argv[]){
         cdata->csock = csock;
         memcpy(&cdata->storage, &cstorage, sizeof(cstorage));
 
+        cdata->client_id = client_id + 1;
+        for (int i = 0; i < MAX_CLIENTS; i++){
+            if (clients[i]->client_id == -1){
+                clients[i] = cdata;
+                break;
+            }
+        }
+        for (int i = 0; i < MAX_TOPICS; i++){
+            cdata->topics[i] = (struct topic*) malloc(sizeof(struct topic));
+            strcpy(cdata->topics[i]->topic_name, "");
+        }
+
+        client_id++;
         pthread_t tid;
         pthread_create(&tid, NULL, client_thread, cdata);
     }

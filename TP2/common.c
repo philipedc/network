@@ -4,6 +4,16 @@
 #include <string.h>
 
 #include <arpa/inet.h>
+#include "common.h"
+
+
+void serialize_BlogOperation(struct BlogOperation *input, char *output, unsigned int buf_size){
+    snprintf(output, buf_size, "%d:%d:%d:%s:%s", input->client_id, input->operation_type, input->server_response, input->topic, input->content);
+}
+
+void deserialize_BlogOperation(char *input, struct BlogOperation *output){
+    sscanf(input, "%d:%d:%d:%19[^:]:%19[^\n]", &output->client_id, &output->operation_type, &output->server_response, output->topic, output->content);
+}
 
 void logexit(const char *str){
     perror(str);
