@@ -32,6 +32,7 @@ unsigned int buf_size = sizeof(struct BlogOperation);
 
 
 int Operation(struct BlogOperation *buf, struct client_data *cdata){
+    buf->server_response = 1; // IF THE SERVER IS SENDING, THE SERVER RESPONSE IS 1
     enum {x, NEW_CONNECTION, NEW_POST, LIST_TOPICS, SUBSCRIBE_TOPIC, DISCONNECT, UNSUBSCRIBE_TOPIC};
     switch(buf->operation_type){
         case NEW_CONNECTION:
@@ -40,10 +41,12 @@ int Operation(struct BlogOperation *buf, struct client_data *cdata){
         case NEW_POST:
             return 2;
             break;
-        case LIST_TOPICS:
+        case LIST_TOPICS:;
+        printf("%s,%s", topics[0].topic_name, topics[1].topic_name);
             for (int i = 0; i < MAX_TOPICS; i++){
                 if (strcmp(topics[i].topic_name, "") != 0){
-                    strcpy(buf->content, topics[i].topic_name);
+                    strcat(buf->content, topics[i].topic_name);
+                    strcat(buf->content, ";");
                 }
             }
             break;
@@ -67,9 +70,19 @@ int Operation(struct BlogOperation *buf, struct client_data *cdata){
             }
             break;
         case DISCONNECT:
+            printf("client %d disconnected\n", cdata->client_id);
+            cdata->client_id = -1;
+            for (int i = 0; i < MAX_TOPICS; i++){
+                strcpy(cdata->topics[i]->topic_name, "");
+            }
             return -1;
         case UNSUBSCRIBE_TOPIC:
-            break;
+            for (int i = 0; i < MAX_TOPICS; i++){
+                if (strcmp(cdata->topics[i]->topic_name, buf->topic) == 0){
+                    strcpy(cdata->topics[i]->topic_name, "");
+                    printf("Client %d unsubscribed from %s\n", cdata->client_id, buf->topic);
+                }
+            }
         default:
             printf("Invalid operation\n");
             break;
@@ -104,9 +117,9 @@ void *client_thread(void *data){
         else if (flag == 2){
             for (int i = 0; i < MAX_CLIENTS; i++){
                 if (clients[i]->client_id != -1){
-                    for (int j = 0; j < MAX_CLIENTS; j++){
+                    for (int j = 0; j < MAX_TOPICS; j++){
                         if (strcmp(clients[i]->topics[j]->topic_name, buf->topic) == 0){
-                            buf->client_id = clients[i]->client_id;
+                            buf->client_id = cdata->client_id;
                             serialize_BlogOperation(buf, buf_serialized, buf_size);
                             count = send(clients[i]->csock, buf_serialized, strlen(buf_serialized)+1, 0);
                             if (count != strlen(buf_serialized)+1) logexit("send");
@@ -123,38 +136,20 @@ void *client_thread(void *data){
         }
     }
     close(cdata->csock);
-
+    free(buf);
+    free(buf_serialized);
     pthread_exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char* argv[]){
+    // Initializing topics array
     for (int i = 0; i < MAX_TOPICS; i++){
         strcpy(topics[i].topic_name, "");
     }
-    // if (argc != 5){
-    //     printf("Usage: <v4/v6> <Port Number> -i <Path>\n");
-    //     exit(EXIT_FAILURE);
-    // }
-    char *input_path;
-    int opt;
-    // while((opt = getopt(argc, argv, "i:")) != -1) 
-    // { 
-    //     switch(opt) 
-    //     { 
-    //         case 'i':
-    //             input_path = optarg;
-    //             break;
-
-    //         default:
-    //             printf("Usage: <v4/v6> <Port Number> -i <Path>\n");
-    //             exit(EXIT_FAILURE);
-    //     }
-    // }
-    // printf("Input path: %s\n", input_path);
 
     struct sockaddr_storage storage;
     if (server_sockaddr_init(argv[1], argv[2], &storage) != 0){
-        printf("Usage: <v4/v6> <Port Number> -i <Path>\n");
+        printf("Usage: <v4/v6> <Port Number>\n");
     }
 
     int s = socket(storage.ss_family, SOCK_STREAM, 0);
@@ -169,8 +164,8 @@ int main(int argc, char* argv[]){
 
     char addrstr[buf_size];
     addrtostr(addr, addrstr, buf_size);
-    printf("Bound to %s, waiting connections\n", addrstr);
 
+    // Initializing clients array(to keep track of clients inside the thread)
     for (int i = 0; i < MAX_CLIENTS; i++){
         clients[i] = (struct client_data *)malloc(sizeof(struct client_data));
         clients[i]->client_id = -1;
@@ -192,10 +187,10 @@ int main(int argc, char* argv[]){
         cdata->csock = csock;
         memcpy(&cdata->storage, &cstorage, sizeof(cstorage));
 
-        cdata->client_id = client_id + 1;
         for (int i = 0; i < MAX_CLIENTS; i++){
             if (clients[i]->client_id == -1){
                 clients[i] = cdata;
+                cdata->client_id = i + 1;
                 break;
             }
         }
