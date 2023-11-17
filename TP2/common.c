@@ -12,7 +12,12 @@ void serialize_BlogOperation(struct BlogOperation *input, char *output, unsigned
 }
 
 void deserialize_BlogOperation(char *input, struct BlogOperation *output){
-    sscanf(input, "%d:%d:%d:%19[^:]:%19[^\n]", &output->client_id, &output->operation_type, &output->server_response, output->topic, output->content);
+    sscanf(input, "%d:%d:%d:%49[^:]:%2047s",
+           &output->client_id,
+           &output->operation_type,
+           &output->server_response,
+           output->topic,
+           output->content);
 }
 
 void logexit(const char *str){

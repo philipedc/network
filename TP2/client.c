@@ -55,7 +55,16 @@ void parse_recv(struct BlogOperation *buf){
             printf("%s\n", buf->content);
             break;
         case LIST_TOPICS:
-            printf("%s\n", buf->content);
+            if (strcmp(buf->content, "") == 0){
+                printf("no topics available\n");
+                break;
+            }
+            char *token;
+            token = strtok(buf->content, ",");
+
+            while (token != NULL) {
+            token = strtok(NULL, ",");
+    }
             break;
         case SUBSCRIBE_TOPIC:
             for (int i = 0; i < MAX_TOPICS; i++){
@@ -83,8 +92,9 @@ void *read_thread(void *data){
         if (recv(s, buf_serialized, buf_size, 0) == -1){
             logexit("recv");
         }
-        deserialize_BlogOperation(buf_serialized, buf);
         printf("Data received: %s\n", buf_serialized);
+        deserialize_BlogOperation(buf_serialized, buf);
+        printf("%s\n", buf->content);
         parse_recv(buf);
     }
 }
@@ -146,9 +156,6 @@ int main(int argc, char* argv[]){
         if (flag == 0) {
             printf("Invalid operation\n");
             continue;
-        }
-        if (flag == 3 && strcmp(buf->topic, "") == 0){
-            printf("no topics available\n");
         }
 
         buf->server_response = 0; // IF THE CLIENT IS SENDING, THE SERVER RESPONSE IS 0

@@ -41,13 +41,16 @@ int Operation(struct BlogOperation *buf, struct client_data *cdata){
         case NEW_POST:
             return 2;
             break;
-        case LIST_TOPICS:;
-        printf("%s,%s", topics[0].topic_name, topics[1].topic_name);
+        case LIST_TOPICS:
             for (int i = 0; i < MAX_TOPICS; i++){
                 if (strcmp(topics[i].topic_name, "") != 0){
                     strcat(buf->content, topics[i].topic_name);
-                    strcat(buf->content, ";");
+                    strcat(buf->content, ",");
                 }
+            }
+            size_t contentLen = strlen(buf->content);
+            if (contentLen > 0) {
+                buf->content[contentLen - 1] = '\0';
             }
             break;
         case SUBSCRIBE_TOPIC:;
@@ -63,7 +66,7 @@ int Operation(struct BlogOperation *buf, struct client_data *cdata){
                 printf("Client %d subscribed to %s\n", cdata->client_id, buf->topic);
             }
             for (int i = 0; i < MAX_TOPICS; i++){
-                if (strcmp(topics[i].topic_name, buf->topic) != 0){
+                if (strcmp(topics[i].topic_name, "") == 0){
                     strcpy(topics[i].topic_name, buf->topic);
                     break;
                 }
