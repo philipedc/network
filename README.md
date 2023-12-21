@@ -2,7 +2,7 @@
 
 ## TP1
 
-Code written in C using the lib socket to create a minefield game communication between client and server. The specifications are in the file ./TP1/TP1.pdf
+Code written in C using the lib socket to create a minefield game communication between client and server. The specification is inside tp1/ (but it's in portuguese)
 
 ### How to use:
 
@@ -19,3 +19,22 @@ Code written in C using the lib socket to create a minefield game communication 
 - "remove_flag x y": unmark the position (x, y)
 - "reset": reset all modifications to the table
 - "exit": disconnect from the server
+
+## TP2
+
+Code also uses lib socket of C, but was added multithreading to serve different clients in a blogpost application.
+
+### How to use:
+
+- Build the project running "make"
+- Execute the client: "./bin/client <IP> <Port_Number>"
+- Now you can execute "Commands" in the client terminal
+
+### Commands:
+
+- "subscribe in topic": start to listen to publications in that topic (if it don't exist, it will be created)
+- "list topics": show all topics created
+- "publish in topic": after enter you'll be prompted to write something until the next enter, the message will be delievered all subscriber of topic
+- "exit": quit the program
+  
+**These commands works only in client side!**
