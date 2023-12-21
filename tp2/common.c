@@ -12,7 +12,7 @@ void serialize_BlogOperation(struct BlogOperation *input, char *output, unsigned
 }
 
 void deserialize_BlogOperation(char *input, struct BlogOperation *output){
-    sscanf(input, "%d:%d:%d:%49[^:]:%2047s",
+    sscanf(input, "%d:%d:%d:%49[^:]:%2047[^\n]",
            &output->client_id,
            &output->operation_type,
            &output->server_response,

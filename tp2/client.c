@@ -22,6 +22,13 @@ unsigned int buf_size = sizeof(struct BlogOperation);
 int parse_input(char* input, struct BlogOperation* buf){
     if (strncmp(input, "subscribe in", 12) == 0){
         sscanf(input, "subscribe in %s", buf->topic);
+
+        for (int i = 0; i < MAX_TOPICS; i++){
+            if (strcmp(topics[i].topic_name, buf->topic) == 0){
+                return -4;
+            }
+        }
+
         buf->operation_type = 4;
         return 4;
     }
@@ -59,19 +66,10 @@ void parse_recv(struct BlogOperation *buf){
                 printf("no topics available\n");
                 break;
             }
-            char *token;
-            token = strtok(buf->content, ",");
-
-            while (token != NULL) {
-            token = strtok(NULL, ",");
-    }
+            printf("%s\n", buf->content);
             break;
         case SUBSCRIBE_TOPIC:
             for (int i = 0; i < MAX_TOPICS; i++){
-                if (strcmp(topics[i].topic_name, buf->topic) == 0){
-                    printf("error: already subscribed\n");
-                    break;
-                }
                 if (strcmp(topics[i].topic_name, "") == 0){
                     strcpy(topics[i].topic_name, buf->topic);
                     break;
@@ -92,9 +90,8 @@ void *read_thread(void *data){
         if (recv(s, buf_serialized, buf_size, 0) == -1){
             logexit("recv");
         }
-        printf("Data received: %s\n", buf_serialized);
         deserialize_BlogOperation(buf_serialized, buf);
-        printf("%s\n", buf->content);
+
         parse_recv(buf);
     }
 }
@@ -158,9 +155,13 @@ int main(int argc, char* argv[]){
             continue;
         }
 
+        if (flag == -4){
+            printf("error: already subscribed\n");
+            continue;
+        }
+
         buf->server_response = 0; // IF THE CLIENT IS SENDING, THE SERVER RESPONSE IS 0
         serialize_BlogOperation(buf, buf_serialized, buf_size);
-        printf("sent: %s\n", buf_serialized);
 
         int count = send(s, buf_serialized, strlen(buf_serialized)+1, 0);
         if (count != strlen(buf_serialized)+1){

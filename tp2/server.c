@@ -42,10 +42,11 @@ int Operation(struct BlogOperation *buf, struct client_data *cdata){
             return 2;
             break;
         case LIST_TOPICS:
+            strcpy(buf->topic, "x");
             for (int i = 0; i < MAX_TOPICS; i++){
                 if (strcmp(topics[i].topic_name, "") != 0){
                     strcat(buf->content, topics[i].topic_name);
-                    strcat(buf->content, ",");
+                    strcat(buf->content, ";");
                 }
             }
             size_t contentLen = strlen(buf->content);
@@ -109,7 +110,6 @@ void *client_thread(void *data){
         memset(buf, 0, buf_size);
         memset(buf_serialized, 0, buf_size);
         int count = recv(cdata->csock, buf_serialized, buf_size, 0);
-        printf("[MSG]: %s", buf_serialized);
         deserialize_BlogOperation(buf_serialized, buf);
 
         int flag = Operation(buf, cdata);
@@ -118,6 +118,7 @@ void *client_thread(void *data){
             break;
         }
         else if (flag == 2){
+            printf("new post added in %s by %d", buf->topic, buf->client_id);
             for (int i = 0; i < MAX_CLIENTS; i++){
                 if (clients[i]->client_id != -1){
                     for (int j = 0; j < MAX_TOPICS; j++){
